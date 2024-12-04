@@ -3,8 +3,8 @@ import React from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useRouter } from "next/navigation";
 import * as yup from "yup";
+import { useMutation } from "@tanstack/react-query";
 
 const schema = yup.object().shape({
   name: yup
@@ -29,6 +29,23 @@ const schema = yup.object().shape({
     .required("Confirm Password is required"),
 });
 
+const createUser = async (userData) => {
+  const response = await fetch("http://localhost:8000/users/create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(userData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Registration failed.");
+  }
+
+  return response.json();
+};
+
 const SignupPage = () => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -42,30 +59,21 @@ const SignupPage = () => {
     mode: "onBlur",
   });
 
-  const router = useRouter();
+  const mutation = useMutation({
+    mutationFn: createUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries(["users"]);
+      router.push("/login"); 
+    },
+  });
 
   const onSubmit = async (data) => {
-    const { name, email, password } = data;
-    setLoading(true);
     setError("");
-
+    setLoading(true);
     try {
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      if (res.ok) {
-        router.push("/login");
-      } else {
-        const response = await res.json();
-        setError(response.message || "Registration failed.");
-      }
+      await mutation.mutateAsync(data);
     } catch (error) {
-      setError("Error during registration.");
+      console.error(error);
     } finally {
       setLoading(false);
     }
