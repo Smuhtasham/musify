@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 const schema = yup.object().shape({
   name: yup
@@ -48,7 +49,7 @@ const createUser = async (userData) => {
 
 const SignupPage = () => {
   const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState("");
+  const router = useRouter();
 
   const {
     register,
@@ -62,18 +63,16 @@ const SignupPage = () => {
   const mutation = useMutation({
     mutationFn: createUser,
     onSuccess: () => {
-      queryClient.invalidateQueries(["users"]);
-      router.push("/login"); 
+      router.push("/login");
     },
   });
 
   const onSubmit = async (data) => {
-    setError("");
     setLoading(true);
     try {
       await mutation.mutateAsync(data);
     } catch (error) {
-      console.error(error);
+      console.log(error);
     } finally {
       setLoading(false);
     }
